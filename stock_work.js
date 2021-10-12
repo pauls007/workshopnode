@@ -4,7 +4,7 @@ var bodyParser = require('body-parser');
 var sqlite3 =require('sqlite3');
 var helpers = require('express-helpers');
 var formidable =require('formidable'); //upload รูปภาพ
-var fs = require("fs"); //file systems
+var fs = require('fs'); //file systems
 //const { render } = require('pug');
 
 
@@ -18,7 +18,7 @@ app.use(express.urlencoded({
 /*---------------------------- Set Path ในการดึงข้อมูลต่าง ๆ เวลาที่เราเปิดหน้า index เช่น รูป เป็นต้น --------------------*/
 app.set('view engine', 'ejs'); //Set template engine
 app.set('views','./stock'); //ใช้ในการอ้าง path หรือ floder ของ view โดยที่ต้องตรวจสอบให้ดีว่า ชื่อ folder ใน code กับ ชื่อ folder จริงมันตรงกัน
-app.use(express.static(path.join(__dirname,'/stock'))); //กำหนดให้ path วิ้งไปที่ stock
+app.use(express.static(path.join(__dirname,'/stock'))); //กำหนดให้ path วิ่งไปที่ stock เพื่อที่จะดึงข้อมูลพวก theme, add.ejs, index.ejs ขึ้นมา
 
 app.get('/', function(req,res){
     
@@ -41,17 +41,83 @@ app.post('/api/add', function(req, res){
         var form = new formidable.IncomingForm();
         var newname = Date.now();
         form.parse(req, function (err, fields, files){
-            console.log("Files: "+JSON.stringify(files));
-            console.log("Fields: "+JSON.stringify(fields));
 
-            /*var oldpath = files.exampleInputFile.path;
-            var fileName = newname.toString()+"."+files.*/
+            var oldpath = files.exampleInputFile.path;
+            var fileName = newname.toString()+"."+files.exampleInputFile.name.split('.').pop();
+            var newpath = path.join(__dirname, "stock/images/" +fileName); //กำหนด path ให้รูปมาลงใน stock/images
+
+            fs.rename(oldpath, newpath, function(err){
+                if(err) throw err;
+
+                var data = {
+                    title: fields.title,
+                    description: fields.description,
+                    prince: fields.prince,
+                    stock: fields.stock,
+                    image: fileName
+                }
+                res.end("Insert Data: "+ JSON.stringify(data));
+                insertData(data)
+                //res.redirect("/");
+            });
         });
     } catch(err){
         console.log("err: "+err);
         res.json(err);
     }
 });
+
+function insertData(data){
+    let db = opendb();
+    const sql = `Insert into stock(title,description, prince, stock, image)
+    values('${data.title}','${data.description}', '${data.prince}', '${data.stock}', '${data.image}')`;
+    console.log(sql);
+
+    db.run(sql)
+
+    closedb(db);
+}
+
+function updateData(data){
+    let db = opendb();
+    const sql = `UPDATE stock SET title= '${data.title}',
+                description= '${data.description}', 
+                prince= '${data.prince}', 
+                stock= '${data.stock}' where id= '${data.id}'`;
+    console.log(sql);            
+
+    db.run(sql)
+
+    closedb(db);
+}
+
+function opendb(){
+    let db = new sqlite3.Database(path.join(__dirname,'stock/db/data.db'), (err) =>{
+        if(err){
+            console.error(err.message);            
+        }
+        console.log('Connected to the stock database');
+    });
+
+    var sql_create_table = `CREATE TABLE IF NOT EXISTS 'stock' (
+        'id' INTEGER PRIMARY KEY AUTOINCREMENT,
+        'title' TEXT,
+        'description' TEXT,
+        'prince' INTEGER,
+        'stock' INTEGER,
+        'image' TEXT
+    )`;
+    db.run(sql_create_table);
+    return db;
+}
+
+function closedb(db){
+    db.close((err) => {
+        if (err){
+            return console.error(err.message);
+        }
+    });
+}
 
 var server = app.listen(3000, function(){
     var host =server.address().address;
