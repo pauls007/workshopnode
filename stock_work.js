@@ -5,6 +5,7 @@ var sqlite3 =require('sqlite3');
 var helpers = require('express-helpers');
 var formidable =require('formidable'); //upload รูปภาพ
 var fs = require('fs'); //file systems
+var proid;
 //const { render } = require('pug');
 
 
@@ -21,7 +22,7 @@ app.set('views','./stock'); //ใช้ในการอ้าง path หร�
 app.use(express.static(path.join(__dirname,'/stock'))); //กำหนดให้ path วิ่งไปที่ stock เพื่อที่จะดึงข้อมูลพวก theme, add.ejs, index.ejs ขึ้นมา
 
 app.get('/', function(req,res){
-    
+    /*
     var dummy_products = []; //Set ตัวแปร dummy_product เป็น array
 
     for(var i=0; i<100; i++){
@@ -29,11 +30,54 @@ app.get('/', function(req,res){
     }
     console.log(JSON.stringify(dummy_products));
     res.render("index",{header:  'Stock Workshop',topics: "Stock Workshop", products: dummy_products});
+    */
+   querydb(function(results){
+    res.render("index",{header:  'Stock Workshop',topics: "Stock Workshop", edits: 'Edit Products', products: results});
+   });
+    
 });
 
 //เมื่อมีการเรียกหน้า add จะมีการ inject code ลงในหน้า add.ejs ด้วย
 app.get('/add', function(req,res){
     res.render("add",{header:  'Create Products', topics: "บันทึกข้อมูล"});
+});
+
+app.get('/edit',function(req, res){
+    proid = req.query.id;
+    QueryById(req.query.id, function (row) {
+        res.render("edit", { header: "Edit Product", item: row })
+    })   
+});
+
+app.post('/api/update',function(req, res){
+    try{
+        var form = new formidable.IncomingForm();
+        var newname = Date.now();
+        form.parse(req, function (err, fields, files){
+
+            var oldpath = files.exampleInputFile.path;
+            var fileName = newname.toString()+"."+files.exampleInputFile.name.split('.').pop();
+            var newpath = path.join(__dirname, "stock/images/" +fileName); //กำหนด path ให้รูปมาลงใน stock/images
+
+            fs.rename(oldpath, newpath, function(err){
+                if(err) throw err;
+
+                var data = {
+                    title: fields.title,
+                    description: fields.description,
+                    prince: fields.prince,
+                    stock: fields.stock,
+                    image: fileName
+                }
+                //res.end("Insert Data: "+ JSON.stringify(data));
+                insertData(data)
+                res.redirect('/');
+            });
+        });
+    } catch(err){
+        console.log("err: "+err);
+        res.json(err);
+    }
 });
 
 app.post('/api/add', function(req, res){
@@ -56,9 +100,9 @@ app.post('/api/add', function(req, res){
                     stock: fields.stock,
                     image: fileName
                 }
-                res.end("Insert Data: "+ JSON.stringify(data));
+                //res.end("Insert Data: "+ JSON.stringify(data));
                 insertData(data)
-                //res.redirect("/");
+                res.redirect('/');
             });
         });
     } catch(err){
@@ -67,6 +111,7 @@ app.post('/api/add', function(req, res){
     }
 });
 
+//Insert DB
 function insertData(data){
     let db = opendb();
     const sql = `Insert into stock(title,description, prince, stock, image)
@@ -78,6 +123,7 @@ function insertData(data){
     closedb(db);
 }
 
+//Update DB
 function updateData(data){
     let db = opendb();
     const sql = `UPDATE stock SET title= '${data.title}',
@@ -91,6 +137,33 @@ function updateData(data){
     closedb(db);
 }
 
+//เรียกข้อมูลทั้งหมดจาก DB ขึ้นมาแสดงผลการทำงาน
+function querydb(callback){
+    let db = opendb();
+
+    db.all(`select * from stock order by id`, (err,row) =>{
+        if(err){
+            callback([]);
+        }
+        callback(row);
+    });
+    closedb(db);
+}
+
+function QueryById(id,callback){
+
+    let db =opendb();
+
+    db.get(`select * from stock where id=${id}`, function (err, row) {
+        if (err) throw err;
+
+        callback(row);
+      });
+    
+      closedb(db);
+    }
+
+//Create DB
 function opendb(){
     let db = new sqlite3.Database(path.join(__dirname,'stock/db/data.db'), (err) =>{
         if(err){
@@ -111,6 +184,7 @@ function opendb(){
     return db;
 }
 
+//Close DB
 function closedb(db){
     db.close((err) => {
         if (err){
