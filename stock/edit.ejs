@@ -859,7 +859,11 @@
               </div>
               <!-- /.card-header -->
               <!-- form start -->
-              <form role="form" action="/api/add" method="post" enctype="multipart/form-data">
+
+              <form role="form" action="/api/update" method="post" enctype="multipart/form-data">
+                <input type="hidden" class="form-group" name="id" value="<%= item.id %>">
+                <input type="hidden" class="form-group" name="image" value="<%= item.image %>">
+
                 <div class="card-body">
                   <div class="form-group">
                     <label for="title">Title</label>
@@ -892,6 +896,7 @@
 
                 <div class="card-footer">
                   <button type="submit" class="btn btn-primary">Submit</button>
+                  <button type="button" class="btn btn-danger "  onclick="window.location.href='/api/delete?id=<%=item.id%>'">Delete</button>
                 </div>
               </form>
             </div>

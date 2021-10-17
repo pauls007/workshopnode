@@ -49,30 +49,39 @@ app.get('/edit',function(req, res){
     })   
 });
 
+
 app.post('/api/update',function(req, res){
     try{
         var form = new formidable.IncomingForm();
         var newname = Date.now();
+
         form.parse(req, function (err, fields, files){
+            if (files.exampleInputFile.size !=0){
 
-            var oldpath = files.exampleInputFile.path;
-            var fileName = newname.toString()+"."+files.exampleInputFile.name.split('.').pop();
-            var newpath = path.join(__dirname, "stock/images/" +fileName); //กำหนด path ให้รูปมาลงใน stock/images
+                var oldpath = files.exampleInputFile.path;
+                //var fileName = newname.toString()+"."+files.exampleInputFile.name.split('.').pop();
+                //var newpath = path.join(__dirname, "stock/images/" +fileName); //กำหนด path ให้รูปมาลงใน stock/images
+                var newpath = path.join(__dirname, "stock/images/" +fields.image); //กำหนด path ให้รูปมาลงใน stock/images
 
-            fs.rename(oldpath, newpath, function(err){
-                if(err) throw err;
+                fs.rename(oldpath, newpath, function(err){
+                    if(err) throw err;
+                    console.log("Update file Successfully");
+                });
+    
+            }
 
-                var data = {
-                    title: fields.title,
-                    description: fields.description,
-                    prince: fields.prince,
-                    stock: fields.stock,
-                    image: fileName
+            var data = {
+                id: fields.id,
+                title: fields.title,
+                description: fields.description,
+                prince: fields.prince,
+                stock: fields.stock,
+                //image: fileName
                 }
-                //res.end("Insert Data: "+ JSON.stringify(data));
-                insertData(data)
-                res.redirect('/');
-            });
+                    //res.end("Insert Data: "+ JSON.stringify(data));
+            updateData(data)
+            res.redirect('/');
+
         });
     } catch(err){
         console.log("err: "+err);
@@ -110,6 +119,28 @@ app.post('/api/add', function(req, res){
         res.json(err);
     }
 });
+
+app.get('/api/delete', function(req, res){
+    deletedata(req.query.id, function(){
+        res.redirect('/');
+    });
+});
+
+function deletedata(id, callback){
+    let db = opendb();
+
+    const sql = `Delete from stock where id='${id}'`;
+
+    console.log(sql);
+
+    db.run(sql, function(err){
+        if(err) throw err
+
+        callback();
+    });
+
+    closedb(db);
+}
 
 //Insert DB
 function insertData(data){
