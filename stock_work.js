@@ -16,6 +16,7 @@ app.use(express.urlencoded({
     extended: true
 }));
 
+
 /*---------------------------- Set Path ในการดึงข้อมูลต่าง ๆ เวลาที่เราเปิดหน้า index เช่น รูป เป็นต้น --------------------*/
 app.set('view engine', 'ejs'); //Set template engine
 app.set('views','./stock'); //ใช้ในการอ้าง path หรือ floder ของ view โดยที่ต้องตรวจสอบให้ดีว่า ชื่อ folder ใน code กับ ชื่อ folder จริงมันตรงกัน
@@ -126,6 +127,12 @@ app.get('/api/delete', function(req, res){
     });
 });
 
+//Handle page not found
+  app.get('*', function(req, res){
+    res.redirect('/');
+  });
+
+
 function deletedata(id, callback){
     let db = opendb();
 
@@ -223,6 +230,9 @@ function closedb(db){
         }
     });
 }
+
+
+
 
 var server = app.listen(3000, function(){
     var host =server.address().address;
